@@ -39,4 +39,50 @@ This document describes the purpose of each COBOL source file in the `src/cobol`
 - [src/cobol/data.cob](src/cobol/data.cob#L1)
 
 ---
+## Sequence diagram
+
+The following Mermaid sequence diagram shows the data flow between the user, `main.cob`, `operations.cob`, and `data.cob` for the `TOTAL`, `CREDIT`, and `DEBIT` operations.
+
+```mermaid
+sequenceDiagram
+	participant U as User
+	participant M as Main
+	participant O as Operations
+	participant D as DataProgram
+
+	U->>M: Enter choice (TOTAL / CREDIT / DEBIT)
+	M->>O: CALL Operations USING OPERATION-TYPE
+
+	alt TOTAL
+		O->>D: CALL DataProgram USING 'READ'
+		D-->>O: STORAGE-BALANCE
+		O-->>M: return balance
+		M-->>U: display balance
+	else CREDIT
+		U->>O: ACCEPT AMOUNT
+		O->>D: CALL DataProgram USING 'READ'
+		D-->>O: STORAGE-BALANCE
+		O-->O: FINAL-BALANCE = STORAGE-BALANCE + AMOUNT
+		O->>D: CALL DataProgram USING 'WRITE' (FINAL-BALANCE)
+		D-->>O: ACK
+		O-->>M: return updated balance
+		M-->>U: display updated balance
+	else DEBIT
+		U->>O: ACCEPT AMOUNT
+		O->>D: CALL DataProgram USING 'READ'
+		D-->>O: STORAGE-BALANCE
+		O-->O: IF STORAGE-BALANCE >= AMOUNT
+		alt Sufficient funds
+			O-->O: FINAL-BALANCE = STORAGE-BALANCE - AMOUNT
+			O->>D: CALL DataProgram USING 'WRITE' (FINAL-BALANCE)
+			D-->>O: ACK
+			O-->>M: return updated balance
+			M-->>U: display updated balance
+		else Insufficient funds
+			O-->>M: return error "Insufficient funds for this debit."
+			M-->>U: display error
+		end
+	end
+```
+
 Generated on March 16, 2026.
