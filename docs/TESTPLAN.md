@@ -1,0 +1,21 @@
+# Test Plan — COBOL Account Management Business Logic
+
+The table below provides test cases that cover the business logic implemented in the COBOL application found in `src/cobol`. Use this table to validate behavior with business stakeholders. Leave "Actual Result" and "Status" blank when executing tests; record outcomes during validation.
+
+| Test Case ID | Test Case Description | Pre-conditions | Test Steps | Expected Result | Actual Result | Status (Pass/Fail) | Comments |
+|---|---|---|---|---|---|---|---|
+| TC-01 | View current balance (TOTAL) | Program started; default balance 1000.00 | 1. From menu enter `1` (View Balance). 2. Observe displayed balance. | Program displays "Current balance: 1000.00" (or current stored balance) |  |  | Reads balance via `DataProgram` READ. |
+| TC-02 | Credit a positive amount | Program started; balance = 1000.00 | 1. From menu enter `2` (Credit). 2. When prompted, enter `250.50`. 3. Observe messages and new balance. | Program accepts amount, writes new balance 1250.50, displays "Amount credited. New balance: 1250.50" |  |  | Uses `ADD AMOUNT TO FINAL-BALANCE` then WRITE. |
+| TC-03 | Credit zero amount | Program started; balance = 1000.00 | 1. Choose Credit. 2. Enter `0.00`. 3. Observe result. | Balance remains 1000.00; display shows "Amount credited. New balance: 1000.00" (accepts zero) |  |  | No validation against zero in current code. |
+| TC-04 | Credit negative amount (behavior check) | Program started; balance = 1000.00 | 1. Choose Credit. 2. Enter `-50.00` (if allowed by terminal). 3. Observe result. | Current implementation will add the value (reducing balance) if negative is parsed; may cause unexpected result or input error. |  |  | Code has no explicit negative-check; define desired policy with stakeholders. |
+| TC-05 | Debit with sufficient funds | Program started; balance >= debit amount (e.g., 1000.00) | 1. Choose Debit. 2. Enter `200.00`. 3. Observe messages and new balance. | Final balance reduces by 200.00 and shows "Amount debited. New balance: 800.00" |  |  | Uses comparison `IF FINAL-BALANCE >= AMOUNT`. |
+| TC-06 | Debit with insufficient funds | Program started; balance = 100.00; attempt debit 200.00 | 1. Choose Debit. 2. Enter `200.00`. 3. Observe messages. | Program displays "Insufficient funds for this debit." and balance remains unchanged. |  |  | No overdraft allowed. |
+| TC-07 | Amount field overflow / large value | Program started; balance small or default | 1. Choose Credit or Debit. 2. Enter `1000000.00` (1,000,000.00). 3. Observe behavior. | Field limit `PIC 9(6)V99` max is 999,999.99 — entering larger value may overflow or wrap; program has no explicit check. |  |  | Document expected handling with stakeholders (reject or cap). |
+| TC-08 | Non-numeric input for amount | Program started | 1. Choose Credit or Debit. 2. Enter `abc` or invalid format. 3. Observe behavior. | Current program uses `ACCEPT` with no parsing: likely runtime/input error or unexpected value; should be validated. |  |  | Define required input validation for node.js port. |
+| TC-09 | Menu invalid selection handling | Program started | 1. At menu prompt enter `9` or non-numeric input. 2. Observe message. | Program displays "Invalid choice, please select 1-4." and re-displays menu. |  |  | Tests menu EVALUATE WHEN OTHER branch. |
+| TC-10 | Persistence across runs | Program started and exited | 1. Start program; balance is default 1000.00 (or modified). 2. Perform credit/debit and exit. 3. Restart program. 4. Check balance. | Current implementation stores balance in working-storage only; balance resets to initial 1000.00 on each run. |  |  | If persistence is required, DataProgram must be extended to use file/db. |
+
+---
+Notes:
+- "Expected Result" reflects current COBOL implementation behavior; where the implementation lacks validation or desired business policy (e.g., negative amounts, overflow, non-numeric input), those rows call out the gap and should be used to confirm stakeholder requirements for the new Node.js implementation.
+- Use this plan as the basis for unit tests (small, deterministic cases) and integration tests (simulate full menu flows). For automated non-interactive tests, consider refactoring the Node.js port to expose program logic as functions you can call programmatically.
